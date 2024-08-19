@@ -162,44 +162,74 @@ class Throw_stuff_onto_the_pdf:
         self.current_position='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
         self.next_to_last_position='N/A'
         self.diagram_count=0
+        self.lineheight=10
 
     def new_page(self):
         self.pdf.add_page()
         self.pdf.x,self.pdf.y= 15, 20
 
     def next_column(self):
-        if self.pdf.x == 15:
-            self.pdf.x = 115
-            self.pdf.y = 20
-        elif self.pdf.x == 115:
-            self.new_page()
+        if self.pdf.get_x() == 115:
+            self.new_page
+        else:
+            self.pdf.x, self.pdf.y=115, 20
+
+    def multiline_printer(self,string):
+        orig_coord=self.pdf.get_x()
+        lines = self.pdf.multi_cell(80,self.lineheight,string,dry_run=True,output='LINES')
+        height = len(lines)*self.lineheight
+        if self.pdf.get_y()+height <=277:
+            self.pdf.multi_cell(80,10,text=string)
+        else:
+            text_in_current_column=''
+            text_in_next_column=''
+            lines_printable= int((277-self.pdf.get_y())//self.lineheight)
+            for i in range(lines_printable):
+                text_in_current_column=text_in_current_column+lines[i]
+            for i in range(lines_printable,len(lines)):
+                text_in_next_column= text_in_next_column+lines[i]
+            self.pdf.multi_cell(80,self.lineheight,text_in_current_column)
+            self.next_column()
+            orig_coord=self.pdf.get_x()
+            self.pdf.multi_cell(80,self.lineheight,text_in_next_column)
+        if self.pdf.get_x()<277:
+            self.pdf.x=orig_coord
+        else:
+            self.next_column()
 
     def new_game(self, header=''):
         self.current_position='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
         self.next_to_last_position='N/A'
 
     def mainline(self,line, position='N/A'):
-        orig_coord = self.pdf.x
+        orig_coord=self.pdf.get_x()
         if position== 'N/A':
             position=self.current_position
         text, self.current_position, self.next_to_last_position = mass_translate_into_cell(line,position)
-        self.pdf.multi_cell(80,10,text=text)
-        if self.y <277:
-            self.x=orig_coord
+        lines=text.split('\n')
+        if self.pdf.get_y()+len(lines)*self.lineheight<277:
+            self.pdf.multi_cell(80,self.lineheight,text)
+        else:
+            lines_printable= int((277-self.pdf.get_y())//self.lineheight)
+            text_in_current_column, text_in_next_column= '', ''
+            for i in range(lines_printable):
+                text_in_current_column=text_in_current_column+lines[i]+'\n'
+            for i in range(lines_printable,len(lines)):
+                text_in_next_column= text_in_next_column+lines[i]+'\n'
+            self.pdf.multi_cell(80,self.lineheight,text_in_current_column)
+            self.next_column()
+            orig_coord=self.pdf.get_x()
+            self.pdf.multi_cell(80,self.lineheight,text_in_next_column)
+        if self.pdf.get_x()<277:
+            self.pdf.x=orig_coord
         else:
             self.next_column()
-        #Need some code to break up this into multiple pages/columns if necessary$$$$$$$
 
     def comment(self,string, position='N/A'):
-        orig_coord = self.pdf.x
         if position== 'N/A':
             position=self.next_to_last_position
         text = replace_dollar_contents(string, position)
-        self.pdf.multi_cell(80,10,text=text)
-        if self.y <277:
-            self.x=orig_coord
-        else:
-            self.next_column()
+        self.multiline_printer(text)
         #Need something to break up this into multiple pages/columns if necessary$$$$$$$
 
     def diagram(self,position='N/A', orientation='N/A'):
@@ -216,11 +246,11 @@ class Throw_stuff_onto_the_pdf:
         self.diagram_count+=1
         image_dimensions=80
         if self.pdf.get_y()<197:
-            self.pdf.image(path_to_image,self.x,self.pdf.get_y()-5,image_dimensions,image_dimensions)
+            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y-5,image_dimensions,image_dimensions)
         else:
             self.next_column()
-            self.pdf.image(path_to_image,self.x,self.y, image_dimensions,image_dimensions)
-        if self.y <197:
+            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y-5, image_dimensions,image_dimensions)
+        if self.y <277:
             self.x=orig_coord
             self.pdf.y += 80
         else:
@@ -251,4 +281,4 @@ if __name__ == '__main__' and 1 == 1:
     _.comment('This is a blunder because Black missed $QxB <Q-B3? BxQ > Q-Q5 K-K2$ and instead White wins on the next move.')
     _.mainline('Q-Q5')
     _.diagram()
-    _.end_pdf('Becoming_more_Texxie_12')
+    _.end_pdf('Becoming_more_Texxie_13')
