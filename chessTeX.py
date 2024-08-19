@@ -158,35 +158,52 @@ class Throw_stuff_onto_the_pdf:
         self.pdf= FPDF()
         self.pdf.add_page()
         self.pdf.set_font('Times',size=12)
-        self.x, self.y=15, 15
+        self.x, self.y=15, 20
         self.current_position='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
         self.next_to_last_position='N/A'
         self.diagram_count=0
 
     def new_page(self):
         self.pdf.add_page()
-        self.x,self.y= 15,15
+        self.pdf.x,self.pdf.y= 15, 20
+
+    def next_column(self):
+        if self.pdf.x == 15:
+            self.pdf.x = 115
+            self.pdf.y = 20
+        elif self.pdf.x == 115:
+            self.new_page()
 
     def new_game(self, header=''):
         self.current_position='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
         self.next_to_last_position='N/A'
 
     def mainline(self,line, position='N/A'):
+        orig_coord = self.pdf.x
         if position== 'N/A':
             position=self.current_position
         text, self.current_position, self.next_to_last_position = mass_translate_into_cell(line,position)
         self.pdf.multi_cell(80,10,text=text)
+        if self.y <277:
+            self.x=orig_coord
+        else:
+            self.next_column()
         #Need some code to break up this into multiple pages/columns if necessary$$$$$$$
 
     def comment(self,string, position='N/A'):
+        orig_coord = self.pdf.x
         if position== 'N/A':
             position=self.next_to_last_position
         text = replace_dollar_contents(string, position)
         self.pdf.multi_cell(80,10,text=text)
-        self.pdf.x =15
+        if self.y <277:
+            self.x=orig_coord
+        else:
+            self.next_column()
         #Need something to break up this into multiple pages/columns if necessary$$$$$$$
 
     def diagram(self,position='N/A', orientation='N/A'):
+        orig_coord=self.pdf.x
         if position== 'N/A':
             position=self.current_position
         if orientation == 'N/A':
@@ -201,9 +218,13 @@ class Throw_stuff_onto_the_pdf:
         if self.pdf.get_y()<197:
             self.pdf.image(path_to_image,self.x,self.pdf.get_y()-5,image_dimensions,image_dimensions)
         else:
-            self.new_page()
+            self.next_column()
             self.pdf.image(path_to_image,self.x,self.y, image_dimensions,image_dimensions)
-        self.pdf.set_xy(15,self.pdf.get_y()+80)
+        if self.y <197:
+            self.x=orig_coord
+            self.pdf.y += 80
+        else:
+            self.next_column()
         #If you want, maybe add some text under the diagram (Figure X.X.XXXX Blah blah blah) to make it look professional
         #Make sure theres enough space on the column/page for a diagram$$$$$$$
 
