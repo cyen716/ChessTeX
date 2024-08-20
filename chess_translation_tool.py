@@ -5,7 +5,7 @@ from chessboard_tool import is_valid_fen as ivf
 import chessboard_tool
 import chess_project_defNs
 
-special_moves=['Castles', 'e.p.']
+special_moves=['Castles', 'e.p.','Castles_K','Castles_Q']
 #this chunk translates individual moves from descriptive to algebraic
 
 def chop(dex_move, delimiter):
@@ -44,6 +44,24 @@ def descriptive_to_algebraic(dex_move,position):
                     initial_squares=['e8']
                     target_squares=['c8','g8']
 
+            elif dex_move=='Castles_K':
+                #Castle algorithm
+                if my_pieces=='WHITE':
+                    initial_squares=['e1']
+                    target_squares=['g1']
+                if my_pieces=='BLACK':
+                    initial_squares=['e8']
+                    target_squares=['g8']
+
+            elif dex_move=='Castles_Q':
+                #Castle algorithm
+                if my_pieces=='WHITE':
+                    initial_squares=['e1']
+                    target_squares=['c1']
+                if my_pieces=='BLACK':
+                    initial_squares=['e8']
+                    target_squares=['c8']
+
             elif dex_move=='e.p.':
                 #e.p. algorithm
                 target_squares=[chessboard_tool.breakdown_fen(position)[3]]
@@ -73,9 +91,12 @@ def descriptive_to_algebraic(dex_move,position):
             promo_piece=dex_move[-1].lower()
             dex_move=dex_move[:-2]
 
-        if 'x' in dex_move and moved_already==False:
+        if ('x' in dex_move or 'X' in dex_move)==True and moved_already==False:
             #Capture algorithm
-            capture = r'x'
+            if 'x' in dex_move:
+                capture = r'x'
+            elif 'X' in dex_move:
+                capture = r'X'
             chopped_move =chop(dex_move,capture)
             X=chopped_move[0]
             Y=chopped_move[1]
@@ -91,7 +112,7 @@ def descriptive_to_algebraic(dex_move,position):
                 #if there is a specific square the piece comes from this takes care of it
                 outside_before, inside_and_after = Y.split('(', 1)
                 inside, outside_after = inside_and_after.split(')', 1)
-                Y = outside_before.strip() + " " + outside_after.strip()
+                Y = outside_before.strip() + outside_after.strip()
                 fix_target_square_ambiguity=True
 
             if len(X) == 1:
@@ -218,7 +239,7 @@ def descriptive_to_algebraic(dex_move,position):
                 #if there is a specific square the piece comes from this takes care of it
                 outside_before, inside_and_after = X.split('(', 1)
                 inside, outside_after = inside_and_after.split(')', 1)
-                X = outside_before.strip() + " " + outside_after.strip()
+                X = outside_before.strip() + outside_after.strip()
                 fix_initial_square_ambiguity=True
             
             if len(X) == 1:
@@ -242,7 +263,7 @@ def descriptive_to_algebraic(dex_move,position):
                 else:
                     target_rank=str(9-int(Y[-1]))
             else:
-                target_files=chess_project_defNs.File_dict.get(Y[0])
+                target_files=chess_project_defNs.File_dict.get(Y)
                 if my_pieces=='WHITE':
                     target_rank='1'
                 else:
@@ -282,10 +303,10 @@ def descriptive_to_algebraic(dex_move,position):
 
             if fix_initial_square_ambiguity==True:
                 if my_pieces== 'WHITE':
-                    initial_file=inside[-1]
+                    initial_rank=inside[-1]
                 elif my_pieces== 'BLACK':
-                    initial_file=str(9-int(inside[-1]))
-                potential_initial_squares_1= [i+ initial_file for i in chess_project_defNs.File_dict.get(inside[:-1])]
+                    initial_rank=str(9-int(inside[-1]))
+                potential_initial_squares_1= [i+ initial_rank for i in chess_project_defNs.File_dict.get(inside[:-1])]
                 potential_initial_squares_2= initial_squares.copy()
                 initial_squares=[]
                 for i in potential_initial_squares_1:

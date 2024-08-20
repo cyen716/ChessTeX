@@ -5,6 +5,9 @@ from fpdf import FPDF
 import re
 
 def take_first_argument(input_string):
+
+    exists_curly_brackets=False
+
     # Find the index of the first whitespace
     split_index = input_string.find(' ')
     
@@ -18,10 +21,19 @@ def take_first_argument(input_string):
         remaining_chunk = input_string[split_index + 1:]
     
     # Check for curly brackets in the first chunk
-    exists_curly_brackets = '{' in first_chunk or '}' in first_chunk
-    
-    # Strip curly brackets from the first chunk
-    stripped_chunk = first_chunk.strip('{}')
+    exists_curly_brackets = '}' in first_chunk
+    if exists_curly_brackets==True:
+        # Strip curly brackets from the first chunk
+        stripped_chunk = first_chunk.strip('{}')
+    else:
+        exists_curly_brackets= '{' in first_chunk
+        if exists_curly_brackets==True:
+            split_index = remaining_chunk.find('}')
+            first_chunk= first_chunk+' '+remaining_chunk[:split_index]
+            remaining_chunk=remaining_chunk[split_index + 2:]
+            stripped_chunk = first_chunk.strip('{}')
+        else:
+            stripped_chunk=first_chunk
     
     return stripped_chunk, remaining_chunk, exists_curly_brackets
 
@@ -68,17 +80,18 @@ def mass_translate_into_cell(line, initial_position='rnbqkbnr/pppppppp/8/8/8/8/P
             position = chess_translation_tool.descriptive_to_algebraic(argument, position).get('position_after_move')
             if chessboard_tool.breakdown_fen(position)[1]== 'w':
                 current_line= current_line + ' '+ alg_move + annotation
+                annotation=''
                 move_number= int(chessboard_tool.breakdown_fen(position)[5])-1
                 text = text + str(move_number) + '. ' + current_line + new_move_symbol
                 current_line= '. .'
             elif chessboard_tool.breakdown_fen(position)[1] == 'b':
                 current_line= alg_move + annotation
+                annotation=''
     if current_line != '. .':
         text = text + str(move_number+1) + '. ' + current_line + new_move_symbol
     return text, position, next_to_last_position
 
 def sideline_interpreter(string,position):
-    sideline=''
     sideline_level=0
     node_tracker=[position]
     current_position=position
@@ -91,7 +104,7 @@ def sideline_interpreter(string,position):
         annotation=''
 
         if comment == True:
-            sideline = sideline + argument
+            text = text + argument
             
         elif comment == False and argument[0] == '<':
             if argument[-2]=='?' or argument[-2]=='!':
@@ -220,21 +233,27 @@ class Throw_stuff_onto_the_pdf:
                 text_in_current_column=text_in_current_column+lines[i]+'\n'
             for i in range(lines_printable,len(lines)):
                 text_in_next_column= text_in_next_column+lines[i]+'\n'
+            if text_in_current_column[-2:]=='\n':
+                text_in_current_column=text_in_current_column[:-2]
+            if text_in_next_column[-2:]=='\n':
+                text_in_next_column=text_in_next_column[:-2]
             self.pdf.multi_cell(80,self.lineheight,text_in_current_column)
             self.next_column()
-
             self.pdf.multi_cell(80,self.lineheight,text_in_next_column)
+            self.pdf.y=self.pdf.get_y()-10
         if self.pdf.get_y()>=277:
             self.next_column()
-        else:
-            self.pdf.y=self.pdf.get_y()-5
+        self.pdf.y=self.pdf.get_y()-10
         if self.column==-1:
             self.pdf.x=15
         elif self.column==1:
             self.pdf.x=115
 
     def comment(self,string, position='N/A'):
+        string= '    '+ string
         if position== 'N/A':
+            position=self.current_position
+        if position== 'B':
             position=self.next_to_last_position
         text = replace_dollar_contents(string, position)
         self.multiline_printer(text)
@@ -248,6 +267,8 @@ class Throw_stuff_onto_the_pdf:
     def diagram(self,position='N/A', orientation='N/A'):
         if position== 'N/A':
             position=self.current_position
+        if position=='B':
+            position=self.next_to_last_position
         if orientation == 'N/A':
             if chessboard_tool.breakdown_fen(self.current_position)[1]== 'w':
                 orientation=0
@@ -258,14 +279,14 @@ class Throw_stuff_onto_the_pdf:
         self.diagram_count+=1
         image_dimensions=80
         if self.pdf.get_y()<197:
-            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y,image_dimensions,image_dimensions)
+            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y+5,image_dimensions,image_dimensions)
         else:
             self.next_column()
-            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y, image_dimensions,image_dimensions)
+            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y+5, image_dimensions,image_dimensions)
         if self.pdf.get_y()>=197:
             self.next_column()
         else:
-            self.pdf.y=self.pdf.get_y()+85
+            self.pdf.y=self.pdf.get_y()+90
         if self.column==-1:
             self.pdf.x=15
         elif self.column==1:
