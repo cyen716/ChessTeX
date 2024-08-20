@@ -158,25 +158,28 @@ class Throw_stuff_onto_the_pdf:
         self.pdf= FPDF()
         self.pdf.add_page()
         self.pdf.set_font('Times',size=12)
-        self.x, self.y=15, 20
+        self.pdf.x, self.pdf.y=15, 20
         self.current_position='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
         self.next_to_last_position='N/A'
         self.diagram_count=0
         self.lineheight=10
+        self.pdf.set_auto_page_break(auto=False)
+        self.column=-1
 
     def new_page(self):
         self.pdf.add_page()
         self.pdf.x,self.pdf.y= 15, 20
 
     def next_column(self):
-        if self.pdf.get_x() == 115:
-            self.new_page
-        else:
-            self.pdf.x, self.pdf.y=115, 20
+        if self.column==-1:
+            self.pdf.x, self.pdf.y=115,20
+        elif self.column==1:
+            self.new_page()
+        self.column=self.column*(-1)
+            
 
     def multiline_printer(self,string):
-        orig_coord=self.pdf.get_x()
-        lines = self.pdf.multi_cell(80,self.lineheight,string,dry_run=True,output='LINES')
+        lines = self.pdf.multi_cell(80,self.lineheight,string,dry_run=True,output='LINES',)
         height = len(lines)*self.lineheight
         if self.pdf.get_y()+height <=277:
             self.pdf.multi_cell(80,10,text=string)
@@ -185,29 +188,30 @@ class Throw_stuff_onto_the_pdf:
             text_in_next_column=''
             lines_printable= int((277-self.pdf.get_y())//self.lineheight)
             for i in range(lines_printable):
-                text_in_current_column=text_in_current_column+lines[i]
+                text_in_current_column=text_in_current_column+lines[i]+' '
             for i in range(lines_printable,len(lines)):
-                text_in_next_column= text_in_next_column+lines[i]
+                text_in_next_column= text_in_next_column+lines[i]+' '
             self.pdf.multi_cell(80,self.lineheight,text_in_current_column)
             self.next_column()
-            orig_coord=self.pdf.get_x()
+
             self.pdf.multi_cell(80,self.lineheight,text_in_next_column)
-        if self.pdf.get_x()<277:
-            self.pdf.x=orig_coord
-        else:
+        if self.pdf.get_y()>=277:
             self.next_column()
+        if self.column==-1:
+            self.pdf.x=15
+        elif self.column==1:
+            self.pdf.x=115
 
     def new_game(self, header=''):
         self.current_position='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
         self.next_to_last_position='N/A'
 
     def mainline(self,line, position='N/A'):
-        orig_coord=self.pdf.get_x()
         if position== 'N/A':
             position=self.current_position
         text, self.current_position, self.next_to_last_position = mass_translate_into_cell(line,position)
         lines=text.split('\n')
-        if self.pdf.get_y()+len(lines)*self.lineheight<277:
+        if self.pdf.get_y()+(len(lines)*self.lineheight)<=277:
             self.pdf.multi_cell(80,self.lineheight,text)
         else:
             lines_printable= int((277-self.pdf.get_y())//self.lineheight)
@@ -218,22 +222,30 @@ class Throw_stuff_onto_the_pdf:
                 text_in_next_column= text_in_next_column+lines[i]+'\n'
             self.pdf.multi_cell(80,self.lineheight,text_in_current_column)
             self.next_column()
-            orig_coord=self.pdf.get_x()
+
             self.pdf.multi_cell(80,self.lineheight,text_in_next_column)
-        if self.pdf.get_x()<277:
-            self.pdf.x=orig_coord
-        else:
+        if self.pdf.get_y()>=277:
             self.next_column()
+        else:
+            self.pdf.y=self.pdf.get_y()-5
+        if self.column==-1:
+            self.pdf.x=15
+        elif self.column==1:
+            self.pdf.x=115
 
     def comment(self,string, position='N/A'):
         if position== 'N/A':
             position=self.next_to_last_position
         text = replace_dollar_contents(string, position)
         self.multiline_printer(text)
-        #Need something to break up this into multiple pages/columns if necessary$$$$$$$
+        if self.pdf.get_y()>=277:
+            self.next_column()
+        if self.column==-1:
+            self.pdf.x=15
+        elif self.column==1:
+            self.pdf.x=115
 
     def diagram(self,position='N/A', orientation='N/A'):
-        orig_coord=self.pdf.x
         if position== 'N/A':
             position=self.current_position
         if orientation == 'N/A':
@@ -246,18 +258,19 @@ class Throw_stuff_onto_the_pdf:
         self.diagram_count+=1
         image_dimensions=80
         if self.pdf.get_y()<197:
-            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y-5,image_dimensions,image_dimensions)
+            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y,image_dimensions,image_dimensions)
         else:
             self.next_column()
-            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y-5, image_dimensions,image_dimensions)
-        if self.y <277:
-            self.x=orig_coord
-            self.pdf.y += 80
-        else:
+            self.pdf.image(path_to_image,self.pdf.x,self.pdf.y, image_dimensions,image_dimensions)
+        if self.pdf.get_y()>=197:
             self.next_column()
-        #If you want, maybe add some text under the diagram (Figure X.X.XXXX Blah blah blah) to make it look professional
-        #Make sure theres enough space on the column/page for a diagram$$$$$$$
-
+        else:
+            self.pdf.y=self.pdf.get_y()+85
+        if self.column==-1:
+            self.pdf.x=15
+        elif self.column==1:
+            self.pdf.x=115
+        
     def end_pdf(self,doc_name='generic_pdf'):
         self.pdf.output(f'PDFs/{doc_name}.pdf')
 

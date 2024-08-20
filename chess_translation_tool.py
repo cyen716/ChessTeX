@@ -144,9 +144,9 @@ def descriptive_to_algebraic(dex_move,position):
                 elif wing=='N/A':
                     dummy_list=[]
                     for i in initial_square_indices:
-                        if i%8 in initial_file:
+                        if (i%8)+1 in initial_file:
                             dummy_list.append(i)
-                    initial_square_indices=dummy_list.copy
+                    initial_square_indices=dummy_list.copy()
 
             if fix_rank_ambiguity==True:
                 if my_pieces=='WHITE':
